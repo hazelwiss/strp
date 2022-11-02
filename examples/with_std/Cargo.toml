@@ -1,0 +1,7 @@
+[package]
+name = "with_std"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+strp = {path = "../../"}

@@ -1,0 +1,20 @@
+[package]
+name = "strp"
+author = "Kim-Dewelski"
+description = "a simple string parsing utility crate, supporting no_std contexts."
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+macros = {path = "macros"}
+cfg-if = "1.0.0"
+
+[features]
+no_std = []
+
+[workspace]
+members = [
+    "macros",
+]
+exclude = ["examples/no_std", "examples/with_std"]
+
