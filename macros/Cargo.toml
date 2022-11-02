@@ -6,7 +6,7 @@ description = "a macro library intended to be used alongside strp"
 license = "MIT"
 repository = "https://github.com/Kim-Dewelski/strp"
 keywords = ["strings", "string", "parsing"]
-categories = ["string-parsing"]
+categories = ["parsing"]
 
 [lib]
 proc_macro = true
