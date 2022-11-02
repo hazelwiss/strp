@@ -1,13 +1,20 @@
 [package]
 name = "strp"
 author = "Kim-Dewelski"
+version = "0.1.0"
+edition = "2021"
 description = "a simple string parsing utility crate, supporting no_std contexts."
 repository = "https://github.com/Kim-Dewelski/strp"
 readme = "readme.md"
 keywords = ["strings", "string", "parsing"]
 categories = ["string-parsing"]
-version = "0.1.0"
-edition = "2021"
+license = "MIT"
+include = [
+    "/Cargo.toml",
+    "/LICENSE-MIT",
+    "/README.md",
+    "/src/**",
+]
 
 [dependencies]
 strp_macros = {verison = "1.0.0"}
