@@ -1,12 +1,15 @@
 [package]
 name = "strp_macros"
-version = "1.0.1"
+version = "2.0.0"
 edition = "2021"
 description = "a macro library intended to be used alongside strp"
 license = "MIT"
 repository = "https://github.com/Kim-Dewelski/strp"
 keywords = ["strings", "string", "parsing"]
 categories = ["parsing"]
+
+[features]
+no_std = []
 
 [lib]
 proc_macro = true
@@ -15,3 +18,4 @@ proc_macro = true
 syn = { version = "1.0.98", features = ["full"] }
 quote = "1.0.9"
 proc-macro2 = "1.0.42"
+cfg-if = "1.0.0"

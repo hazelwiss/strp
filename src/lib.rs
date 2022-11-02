@@ -1,9 +1,57 @@
-//! Utility library for parsing data from input strings, or stdin if not with the `no_std` feature.
+//! Utility library for parsing data from input strings, or stdin if not built with the `no_std` feature.
 //! Supports no_std contexts, but requires the alloc crate.
 //!
-//! ```
-//! let (left, right) = strp::scan!("add {}, {}");
+//! ```no_run
+//! # use strp::{scan, try_parse, parse, try_scan};
+//! // `scan` parses two or more values from an input string.
+//! // Panics on failure.
+//! let (left, right): (u32, u32) = scan!("add {}, {}");
 //! println!("sum: {}", left + right);
+//!
+//! // `parse` parses a single value from a string, but has more
+//! // cohesive errors.
+//! // Panics on failure.
+//! let value: String = parse!("hello, {}!");
+//! println!("your name is: {value}");
+//!
+//! // You can also attempt parsing, returning an Err on failure.
+//! // The `scan` equivalent is `try_scan`.
+//! let value: Result<u32, _> = try_parse!("write here: {}");
+//! match value{
+//!     Ok(value) => println!("input that was written there: {value}"),
+//!     Err(e) => println!("failed to parse the input string! {e:?}"),
+//! }
+//!
+//! // Matched values may also be inlined into the match string.
+//! let number;
+//! try_parse!("input_number: 20" => "input number: {number}");
+//! assert_eq!(number, Ok(20));
+//!
+//! let (mut l, mut r) = ("".to_string(), "".to_string());
+//! try_scan!("hello world!" => "{l} {r}").expect("failed to parse");
+//! assert_eq!((l, r), ("hello".to_string(), "world!".to_string()));
+//!
+//! // `scan` and `try_scan` can mix both inlining mathing values,
+//! // or capture them as a return value.
+//! let (mut x, mut y, mut z) = (0, 0, 0);
+//! let v = try_scan!("10, 20, 30, 40" => "{}, {x}, {y}, {z}");
+//! assert_eq!((v, x, y, z), (Ok(10), 20, 30, 40));
+//!
+//! let (mut x, mut y, mut z) = (0, 0, 0);
+//! let v = try_scan!("10, 20, 30, 40" => "{x}, {}, {y}, {z}");
+//! assert_eq!((v, x, y, z), (Ok(20), 10, 30, 40));
+//!
+//! let (mut x, mut y, mut z) = (0, 0, 0);
+//! let v = try_scan!("10, 20, 30, 40" => "{x}, {y}, {}, {z}");
+//! assert_eq!((v, x, y, z), (Ok(30), 10, 20, 40));
+//!
+//! let (mut x, mut y, mut z) = (0, 0, 0);
+//! let v = try_scan!("10, 20, 30, 40" => "{x}, {y}, {z}, {}");
+//! assert_eq!((v, x, y, z), (Ok(40), 10, 20, 30));
+//!
+//! let (mut x, mut y) = (0, 0);
+//! let v = try_scan!("10, 10, 20, 20" => "{x}, {}, {y}, {}");
+//! assert_eq!(v, Ok((x,y)));
 //! ```
 
 #![cfg_attr(feature = "no_std", no_std)]
@@ -12,7 +60,6 @@
 #[doc(hidden)]
 pub extern crate strp_macros as macros;
 
-extern crate alloc;
 extern crate self as strp;
 
 #[cfg(test)]
@@ -20,6 +67,7 @@ mod tests;
 
 #[doc(hidden)]
 pub mod __private {
+    pub extern crate alloc;
     pub use macros;
 
     use crate::TryParseError;
@@ -107,144 +155,7 @@ pub mod __private {
     impl_sparse_multiple_tuple!(A,B; 2;);
 }
 
-cfg_if::cfg_if! {
-    if #[cfg(feature = "no_std")]{
-        #[doc(hidden)]
-        #[macro_export]
-        macro_rules! __readline {
-            ($str:literal, $($tt:tt)*) => {
-                {
-                    #![allow(unreachable_code)]
-                    const _: () = panic!("attempting to read from stdin with the `no_std` feature enabled!");
-                    unreachable!();
-                    $($tt)*!("" => $str)
-                }
-            };
-        }
-    } else {
-        #[doc(hidden)]
-        #[macro_export]
-        macro_rules! __readline {
-            ($str:literal, $($tt:tt)*) => {
-                {
-                    let mut string = ::std::string::String::new();
-                    ::std::io::stdin().read_line(&mut string).unwrap();
-                    string.pop();
-                    $($tt)*!(string => $str)
-                }
-            };
-        }
-    }
-}
-
-/// Attempts to parse a single varialbe from an iterator on a type that implements
-/// the `TryParse` trait.
-///
-/// The macro takes in a source expression, which is then matched against a string
-/// literal in order to match a single value from the source. The source expression
-/// must evaluate into a type that derives the `TryParse`trait.
-///
-/// ```
-/// // The whole source string will be parsed as a u32.
-/// let source = "20".to_string();
-/// let v = try_parse!(source => "{}");
-/// assert_eq!(v, Ok(20u32));
-///
-/// // Only "world" will be parsed into `v`, since the rest
-/// // of the `source` string won't be matched into a value.
-/// let source = "hello world!".to_string();
-/// let v = try_parse!(source => "hello {}!");
-/// assert_eq!(v, Ok("world".to_string()));
-///
-/// // An error is returned, since `source` doesn't
-/// // match the matching string.
-/// let source = "abcd".to_string();
-/// let v: Result<String, _> = try_parse!(source => "123{}");
-/// assert!(matches!(v, Err(_)));
-///
-/// // `source` does match the matching string, but fails to
-/// // parse 'd' as a u32.
-/// let source = "123d".to_string();
-/// let v: Result<u32, _> = try_parse!(source => "123{}");
-/// assert!(matches!(v, Err(_)));
-///
-/// // try_parse also works well on &str as `source`.
-/// let source = "abcd";
-/// let v = try_parse!(source => "{}");
-/// assert_eq!(v, Ok("abcd".to_string()));
-///
-/// // uses stdin instead of a source string.
-/// let v: f64 = try_parse!("{}");
-/// println!("{v}");
-/// ```
-#[macro_export]
-macro_rules! try_parse {
-    ($expr:expr => $str:literal) => {
-        ::strp::__private::macros::try_parse!($expr => $str)
-    };
-    ($str:literal) =>  {
-        {
-            ::strp::__readline!($str, ::strp::try_parse)
-        }
-    };
-}
-
-/// Attempts to parse a single variable from an iterator described by a string literal.
-/// Panics on error.
-///
-/// For more details read the documentation of the `try_parse` macro.
-#[macro_export]
-macro_rules! parse {
-    ($expr:expr => $str:literal) => {
-        ::strp::try_parse!($expr => $str).unwrap()
-    };
-    ($str:literal) =>  {
-        {
-            ::strp::__readline!($str, ::strp::parse)
-        }
-    };
-}
-
-/// Very similar to `try_parse`, except it allows for 2 or more matched values.
-///
-/// For more details read the documenation of the `try_parse` macro.
-///
-/// ```
-/// let source = "10, 20, 30, 40";
-/// let v = try_scan!(source => "{}, {}, {}, {}");
-/// assert_eq!(v, Ok((10, 20, 30, 40)));
-///
-/// // uses stdin as source.
-/// let (l,r): (u32,u32) = try_scan!("add {}, {}").unwrap();
-/// println!("{}", l + r);
-/// ```
-#[macro_export]
-macro_rules! try_scan {
-    ($expr:expr => $str:literal) => {
-        ::strp::__private::macros::try_scan!($expr => $str)
-    };
-    ($str:literal) =>  {
-        {
-            ::strp::__readline!($str, ::strp::try_scan)
-        }
-    };
-}
-
-/// Attempts to parse multiple variables from an iterator described by a string literal.
-/// Panics on error.
-///
-/// For more details read the documentation of the `try_scan` macro.
-#[macro_export]
-macro_rules! scan {
-    ($expr:expr => $str:literal) => {
-        ::strp::try_scan!($expr => $str).unwrap()
-    };
-    ($str:literal) =>  {
-        {
-            ::strp::__readline!($str, ::strp::scan)
-        }
-    };
-}
+pub use macros::{parse, scan, try_parse, try_scan};
 
 /// Allows a type to be parsed through `try_parse`, `parse`, `try_scan` and `scan` macros.
 pub trait TryParse
@@ -265,10 +176,10 @@ macro_rules! impl_from_str_tys {
                 type Err = <Self as ::core::str::FromStr>::Err;
 
                 fn try_parse(
-                    iter: &mut impl Iterator<Item = u8>,
+                    iter: &mut impl  core::iter::Iterator<Item = u8>,
                 ) -> Result<Self, TryParseError<Self::Err>> {
                     Ok(::core::str::FromStr::from_str(
-                        core::str::from_utf8(&iter.collect::<alloc::vec::Vec<u8>>()).expect(""),
+                        core::str::from_utf8(&iter.collect::<__private::alloc::vec::Vec<u8>>()).expect(""),
                     )?)
                 }
             }
@@ -289,7 +200,7 @@ impl_from_str_tys!(
     i128,
     f32,
     f64,
-    alloc::string::String
+    __private::alloc::string::String
 );
 
 /// Generic error type for parsing.
@@ -297,7 +208,7 @@ impl_from_str_tys!(
 pub enum TryParseError<T> {
     /// The pattern in the source string doesn't match
     /// the given pattern.
-    ExpectedMismatch(&'static str, alloc::string::String),
+    ExpectedMismatch(&'static str, __private::alloc::string::String),
     /// Contains a generic error from `T`.
     Err(T),
 }
