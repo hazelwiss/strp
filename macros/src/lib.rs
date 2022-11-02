@@ -314,17 +314,17 @@ macro_rules! __impl__ {
     };
 }
 
-/// Attempts to parse a single varialbe from an iterator on a type that implements
+/// Attempts to parse a single variable from an iterator on a type that implements
 /// the `TryParse` trait.
 ///
-/// The macro takes in a source expression, which is then matched against a string
+/// Accepts a source expression, which is then matched against a string
 /// literal in order to match a single value from the source. The source expression
 /// must evaluate into a type that derives the `TryParse`trait.
 ///
 /// ```no_run
 /// # use crate::{scan, try_scan, parse, try_parse};
 ///
-/// // The whole source string will be parsed as a u32.
+/// // The whole source string will be parsed into a u32.
 /// let source = "20".to_string();
 /// let v = try_parse!(source => "{}");
 /// assert_eq!(v, Ok(20u32));
@@ -347,17 +347,18 @@ macro_rules! __impl__ {
 /// let v: Result<u32, _> = try_parse!(source => "123{}");
 /// assert!(matches!(v, Err(_)));
 ///
-/// // `try_parse` also works well on &str as `source`.
+/// // `try_parse` also works well on a non-literal as `source`.
 /// let source = "abcd";
 /// let v = try_parse!(source => "{}");
 /// assert_eq!(v, Ok("abcd".to_string()));
 ///
 /// // Uses stdin instead of a source string.
-/// // Only available without the
+/// // Only available without the `no_std` feature.
 /// let v: f64 = parse!("{}");
 /// println!("{v}");
 ///
-/// // Inlines the matched  value.
+/// // Inlines the matched value. This causes `parse` to return ()
+/// // and instead assigns the parse result to v directly.
 /// let v: u32;
 /// parse!("u32:{v}");
 /// println!("{v}");

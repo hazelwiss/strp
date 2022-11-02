@@ -31,8 +31,8 @@
 //! try_scan!("hello world!" => "{l} {r}").expect("failed to parse");
 //! assert_eq!((l, r), ("hello".to_string(), "world!".to_string()));
 //!
-//! // `scan` and `try_scan` can mix both inlining mathing values,
-//! // or capture them as a return value.
+//! // `scan` and `try_scan` can mix both inlining matching values,
+//! // or alternatively capture them as a return value.
 //! let (mut x, mut y, mut z) = (0, 0, 0);
 //! let v = try_scan!("10, 20, 30, 40" => "{}, {x}, {y}, {z}");
 //! assert_eq!((v, x, y, z), (Ok(10), 20, 30, 40));
@@ -157,7 +157,7 @@ pub mod __private {
 
 pub use macros::{parse, scan, try_parse, try_scan};
 
-/// Allows a type to be parsed through `try_parse`, `parse`, `try_scan` and `scan` macros.
+/// Allows a type to be parsed through the `try_parse`, `parse`, `try_scan` and `scan` macros.
 pub trait TryParse
 where
     Self: Sized,

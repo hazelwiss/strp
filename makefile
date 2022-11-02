@@ -12,4 +12,5 @@ dry:
 pub:
 	cd macros && cargo publish
 	cargo publish
+	git push
 
