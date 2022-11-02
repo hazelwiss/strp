@@ -1,6 +1,6 @@
 [package]
 name = "strp_macros"
-version = "1.0.0"
+version = "1.0.1"
 edition = "2021"
 description = "a macro library intended to be used alongside strp"
 license = "MIT"
