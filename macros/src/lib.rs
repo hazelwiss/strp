@@ -29,6 +29,7 @@ impl Parse for Sparse {
 }
 
 struct Var {
+    #[allow(unused)]
     inlined: Option<Ident>,
 }
 
