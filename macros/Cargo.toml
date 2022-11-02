@@ -7,6 +7,10 @@ license = "MIT"
 repository = "https://github.com/Kim-Dewelski/strp"
 keywords = ["strings", "string", "parsing"]
 categories = ["parsing"]
+include = [
+    "/Cargo.toml",
+    "/src/**",
+]
 
 [features]
 no_std = []
