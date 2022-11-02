@@ -353,7 +353,7 @@ macro_rules! __impl__ {
 /// assert_eq!(v, Ok("abcd".to_string()));
 ///
 /// // Uses stdin instead of a source string.
-/// // Only available without the `std` feature.
+/// // Only available with the `std` feature.
 /// let v: f64 = parse!("{}");
 /// println!("{v}");
 ///

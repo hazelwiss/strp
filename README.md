@@ -4,7 +4,7 @@ Utility library for parsing data from input strings, or stdin if built with the 
 Supports no_std contexts, but requires the alloc crate.
 
 ```rust
-// `scan` parses two or more values from an input string.
+// `scan` parses two or more values from stdin.
 // Panics on failure.
 let (left, right): (u32, u32) = scan!("add {}, {}");
 println!("sum: {}", left + right);
@@ -22,6 +22,10 @@ match value{
     Ok(value) => println!("input that was written there: {value}"),
     Err(e) => println!("failed to parse the input string! {e:?}"),
 }
+
+// Uses a source string rather than piping stdin.
+let value: String = try_parse!("this string is matched" => "{} string is matched");
+assert_eq!(value, Ok("this".to_string()));
 
 // Matched values may also be inlined into the match string.
 let number;
