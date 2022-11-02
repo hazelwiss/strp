@@ -1,4 +1,4 @@
-//! Utility library for parsing data from input strings, or stdin if not built with the `no_std` feature.
+//! Utility library for parsing data from input strings, or stdin if not built with the `std` feature.
 //! Supports no_std contexts, but requires the alloc crate.
 //!
 //! ```no_run
