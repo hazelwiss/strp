@@ -1,6 +1,6 @@
 # strp
 
-Utility library for parsing data from input strings, or stdin if not built with the `std` feature.
+Utility library for parsing data from input strings, or stdin if built with the `std` feature.
 Supports no_std contexts, but requires the alloc crate.
 
 ```rust
