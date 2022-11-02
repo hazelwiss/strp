@@ -1,6 +1,6 @@
 # strp
 
-Utility library for parsing data from input strings, or stdin if built with the `std` feature.
+Utility library for parsing data from input strings, or stdin if not built with the `no_std` feature.
 Supports no_std contexts, but requires the alloc crate.
 
 ```rust
@@ -32,8 +32,8 @@ let (mut l, mut r) = ("".to_string(), "".to_string());
 try_scan!("hello world!" => "{l} {r}").expect("failed to parse");
 assert_eq!((l, r), ("hello".to_string(), "world!".to_string()));
 
-// `scan` and `try_scan` can mix both inlining mathing values,
-// or capture them as a return value.
+// `scan` and `try_scan` can mix both inlining matching values,
+// or alternatively capture them as a return value.
 let (mut x, mut y, mut z) = (0, 0, 0);
 let v = try_scan!("10, 20, 30, 40" => "{}, {x}, {y}, {z}");
 assert_eq!((v, x, y, z), (Ok(10), 20, 30, 40));

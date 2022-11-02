@@ -10,6 +10,7 @@ dry:
 # Publishes all crates.
 .PHONY: pub
 pub:
+	cargo readme > README.md
 	cd macros && cargo publish
 	cargo publish
 	git push
