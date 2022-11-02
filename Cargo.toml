@@ -2,11 +2,15 @@
 name = "strp"
 author = "Kim-Dewelski"
 description = "a simple string parsing utility crate, supporting no_std contexts."
+repository = "https://github.com/Kim-Dewelski/strp"
+readme = "readme.md"
+keywords = ["strings", "string", "parsing"]
+categories = ["string-parsing"]
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-macros = {path = "macros"}
+strp_macros = {verison = "1.0.0"}
 cfg-if = "1.0.0"
 
 [features]

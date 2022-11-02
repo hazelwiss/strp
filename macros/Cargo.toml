@@ -1,7 +1,10 @@
 [package]
-name = "macros"
-version = "0.1.0"
+name = "strp_macros"
+version = "1.0.0"
 edition = "2021"
+repository = "https://github.com/Kim-Dewelski/strp"
+keywords = ["strings", "string", "parsing"]
+categories = ["string-parsing"]
 
 [lib]
 proc_macro = true

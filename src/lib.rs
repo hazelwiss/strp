@@ -9,6 +9,9 @@
 #![cfg_attr(feature = "no_std", no_std)]
 #![warn(missing_docs)]
 
+#[doc(hidden)]
+pub extern crate strp_macros as macros;
+
 extern crate alloc;
 extern crate self as strp;
 
