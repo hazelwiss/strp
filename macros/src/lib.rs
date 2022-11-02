@@ -289,21 +289,21 @@ macro_rules! __impl__ {
                 }
                 MacroInput::Stdin(literal) => {
                     cfg_if::cfg_if! {
-                        if #[cfg(feature = "no_std")]{
-                            quote!{
-                                {
-                                    const _: () = assert!("attempting to read from stdin with the `no_std` feature enabled!");
-                                    unreachable!();
-                                    $($tt)*!("" => #literal)
-                                }
-                            }
-                        } else{
+                        if #[cfg(feature = "std")]{
                             quote!{
                                 {
                                     let mut string = ::std::string::String::new();
                                     ::std::io::stdin().read_line(&mut string).unwrap();
                                     string.pop();
                                     $($tt)*!(string => #literal)
+                                }
+                            }
+                        } else{
+                            quote!{
+                                {
+                                    const _: () = panic!("attempting to read from stdin with the `std` feature disabled!");
+                                    unreachable!();
+                                    $($tt)*!("" => #literal)
                                 }
                             }
                         }
@@ -353,7 +353,7 @@ macro_rules! __impl__ {
 /// assert_eq!(v, Ok("abcd".to_string()));
 ///
 /// // Uses stdin instead of a source string.
-/// // Only available without the `no_std` feature.
+/// // Only available without the `std` feature.
 /// let v: f64 = parse!("{}");
 /// println!("{v}");
 ///

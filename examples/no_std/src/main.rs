@@ -3,15 +3,17 @@
 
 extern crate alloc;
 
-fn main() {
-    let _parse: u32 = strp::parse!("{}");
+#[no_mangle]
+fn main() -> ! {
+    let _parse: u32 = strp::parse!("hello" => "{}");
 
-    let _scan: (u32, u32) = strp::scan!("{}, {}");
+    let _scan: (u32, u32) = strp::scan!("hello" => "{}, {}");
+    loop {}
 }
 
 #[panic_handler]
 #[no_mangle]
-unsafe fn panic_handler(info: &core::panic::PanicInfo) -> ! {
+unsafe fn panic_handler(_info: &core::panic::PanicInfo) -> ! {
     todo!()
 }
 

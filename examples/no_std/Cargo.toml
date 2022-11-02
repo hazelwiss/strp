@@ -4,4 +4,4 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-strp = {path = "../../", features = ["no_std"]}
+strp = {path = "../../", default-features = false}
