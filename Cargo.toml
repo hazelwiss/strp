@@ -1,7 +1,7 @@
 [package]
 name = "strp"
 author = "Kim-Dewelski"
-version = "0.2.1"
+version = "0.2.2"
 edition = "2021"
 description = "a simple string parsing utility crate, supporting no_std contexts."
 repository = "https://github.com/Kim-Dewelski/strp"
@@ -17,7 +17,7 @@ include = [
 ]
 
 [dependencies]
-strp_macros = {path = "macros", version = "2.0.1"}
+strp_macros = {path = "macros", version = "2.0.2"}
 
 [features]
 no_std = []
