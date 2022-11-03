@@ -411,15 +411,15 @@ macro_rules! __impl__ {
 /// let v: Result<u32, _> = try_parse!(source => "123{}");
 /// assert!(matches!(v, Err(_)));
 ///
-/// // `try_parse` also works well on a non-literal as `source`.
-/// let source = "abcd";
-/// let v = try_parse!(source => "{}");
+/// // `try_parse` also works well on a literal.
+/// let v = try_parse!("abcd" => "{}");
 /// assert_eq!(v, Ok("abcd".to_string()));
 ///
-/// // Inlines the matched value. This causes `parse` to return ()
-/// // and instead assigns the parse result to v directly.
-/// let v: u32;
-/// parse!("u32:5" => "u32:{v}");
+/// // Inlines the matched value. This causes `parse` to return Result<(),_>
+/// // where the error type is deduced. If the parsing was successful, the
+/// // successfully parsed value will be put into v.
+/// let v = 0;
+/// try_parse!("u32:5" => "u32:{v}");
 /// assert_eq!(v, 5);
 /// ```
 ///
@@ -463,12 +463,22 @@ pub fn try_parse(ts: TokenStream) -> TokenStream {
 ///
 /// For more details read the documentation of the `strp` crate.
 ///
-/// ```no_run
+/// ```
 /// # use crate::parse;
 /// let source = "hello world!";
-/// let world = strp::parse!(source => "hello {}!");
+/// let world = parse!(source => "hello {}!");
 /// assert_eq!(world, "world".to_string());
 ///
+/// // As a side effect of `parse` unwrapping and causing a possible
+/// // panic, it is not necessary to give inlined variables intitial
+/// // values
+/// let v;
+/// parse!("value" => "{v}");
+/// asseert_eq!(v, "value".to_string());
+/// ```
+/// ```no_run
+///
+/// # use crate::parse
 /// // Uses stdin as source.
 /// let number: u32 = parse!("input number: {}");
 /// println!("number: {number})
@@ -490,11 +500,11 @@ pub fn parse(ts: TokenStream) -> TokenStream {
 /// ```
 /// # use crate::try_scan;
 /// let source = "10, 20, 30, 40";
-/// let matched = strp::try_scan!(source => "{}, {}, {}, {}");
+/// let matched = try_scan!(source => "{}, {}, {}, {}");
 /// assert_eq!(matched, Ok((10, 20, 30, 40)));
 ///
 /// // Uses stdin as source.
-/// let input: Result<(u32, u32), _> = strp::try_scan!("add {}, {}");
+/// let input: Result<(u32, u32), _> = try_scan!("add {}, {}");
 /// match input {
 ///     Ok((l,r)) => println!("result: {}", l + r),
 ///     Err(e) => println!("parsing error: {e:?}"),
@@ -515,12 +525,16 @@ pub fn try_scan(ts: TokenStream) -> TokenStream {
 ///
 /// For more details read the documentation of the `strp` crate.
 ///
-/// ```no_run
+/// ```
 /// # use crate::scan;
 /// let source = "10, 20, 30, 40";
-/// let matched = strp::scan!(source => "{}, {}, {}, {}");
+/// let matched = scan!(source => "{}, {}, {}, {}");
 /// assert_eq!(matched, (10, 20, 30, 40));
+/// ```
 ///
+/// ```
+///
+/// # use crate::scan
 /// // Uses stdin as source.
 /// let (l, r): (u32, u32) = scan!("add {}, {}");
 /// println!("result: {}", l + r)

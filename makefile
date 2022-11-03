@@ -13,3 +13,7 @@ pub:
 	cd macros && cargo publish
 	cargo publish
 
+.PHONY: test
+test:
+	cargo test
+	cargo test --no-default-features

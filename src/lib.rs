@@ -1,5 +1,5 @@
 //! Utility library for parsing data from an input string, or stdin if built with the `std` feature.
-//! Supports no_std contexts without the `std` feature, but requires the alloc crate.
+//! Supports no_std contexts when built without the `std` feature enabled. Requires the alloc crate.
 //! The `std` feature is enabled by default.
 //!
 //! Supports parsing one or multiple values from a string. Can parse primitives, Strings, or any
@@ -7,8 +7,9 @@
 //!
 //! Supports parsing primitives from hexadecimal or binary values.
 //!
-//! The macros put high emphasis on deducing types, meaning you rarely need to specify the type yourself
-//! unless you want to enforce a specific type, or there's missing context.
+//! The `try_parse`, `parse`, `try_scan` and `scan` macros put high emphasis on deducing types,
+//! meaning you rarely need to specify the type yourself unless you want to enforce a specific
+//! type, or there's missing context.
 //!
 //! # Basic `parse` and `try_parse` usage
 //!
@@ -91,6 +92,13 @@
 //! try_scan!("hello world!" => "{l} {r}").expect("failed to parse");
 //! assert_eq!((l, r), ("hello".to_string(), "world!".to_string()));
 //!
+//! // If the parsing failed, an error is returned by the macro call.
+//! let mut number: i32 = -1;
+//! match try_parse!("fail 20" => "success {number}"){
+//!     Ok(_) => println!("parsed value: {number}"),
+//!     Err(_) => println!("failed to parse input string"),
+//! }
+//!
 //! // Inlining can also be paired with returning values in `scan` and `try_scan`.
 //! let (mut left, mut right) = ("".to_string(), "".to_string());
 //! let middle = scan!("left middle right" => "{left} {} {right}");
@@ -126,7 +134,8 @@
 //!
 //! ```
 //! # use strp::{scan, try_parse, parse, try_scan};
-//! let hex: Result<u64, _> /* Need to specify 'u64' here, since otherwise the value will be too large. */ =
+//! // Need to specify 'u64' here, since otherwise the value will be too large.
+//! let hex: Result<u64, _> =  
 //!     try_parse!("input hex: 0x0123456789ABCDEF" => "input hex: 0x{:x}");
 //! assert_eq!(hex, Ok(0x0123456789ABCDEF));
 //!
@@ -202,7 +211,7 @@ pub mod __private {
                     fn try_parse(
                         iter: &mut impl Iterator<Item = u8>,
                     ) -> Result<Self, TryParseError<Self::Err>> {
-                        let vec = iter.collect::<Vec<u8>>();
+                        let vec = iter.collect::<alloc::vec::Vec<u8>>();
                         let str = core::str::from_utf8(&vec)
                             .or(Err(TryParseError::InvalidUtf8String))?;
                         Ok(Self(<$ty>::from_str_radix(&str, 16)?))
@@ -221,7 +230,7 @@ pub mod __private {
                     fn try_parse(
                         iter: &mut impl Iterator<Item = u8>,
                     ) -> Result<Self, TryParseError<Self::Err>> {
-                        let vec = iter.collect::<Vec<u8>>();
+                        let vec = iter.collect::<alloc::vec::Vec<u8>>();
                         let str = core::str::from_utf8(&vec)
                             .or(Err(TryParseError::InvalidUtf8String))?;
                         Ok(Self(<$ty>::from_str_radix(&str, 2)?))
