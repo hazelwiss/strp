@@ -1,7 +1,10 @@
+//! Macro crate for strp crate.
+
+#![warn(missing_docs)]
+
 use proc_macro::TokenStream;
 use proc_macro2::{Ident, Span};
 use quote::quote;
-#[warn(missing_docs)]
 use std::{
     iter::Peekable,
     str::{Chars, FromStr},
@@ -28,9 +31,16 @@ impl Parse for Sparse {
     }
 }
 
+enum VarTy {
+    Normal,
+    Hex,
+    Binary,
+}
+
 struct Var {
     #[allow(unused)]
     inlined: Option<Ident>,
+    ty: VarTy,
 }
 
 struct Sensetized {
@@ -48,6 +58,8 @@ fn sensetize_single(iter: &mut Peekable<Chars>) -> Sensetized {
                 m_str.push('{')
             } else {
                 let mut ident = String::new();
+                let mut ty_str = String::new();
+                let mut pushing_ident = true;
                 loop {
                     match c {
                         '}' => {
@@ -56,10 +68,22 @@ fn sensetize_single(iter: &mut Peekable<Chars>) -> Sensetized {
                             } else {
                                 Some(Ident::new(&ident, Span::call_site()))
                             };
-                            var_option = Some(Var { inlined });
+                            let ty = if !ty_str.is_empty() {
+                                let determining_character = ty_str.pop().unwrap();
+                                match determining_character {
+                                    'x' => VarTy::Hex,
+                                    'b' => VarTy::Binary,
+                                    _ => panic!("invalid parsing type after ':'. Try writing {{{ident}:b}} or {{{ident}:x}}")
+                                }
+                            } else {
+                                VarTy::Normal
+                            };
+                            var_option = Some(Var { inlined, ty });
                             break 'outer;
                         }
-                        c => ident.push(c),
+                        ':' => pushing_ident = false,
+                        c if pushing_ident => ident.push(c),
+                        c => ty_str.push(c),
                     }
                     c = iter.next().expect("missibng closing '}' after '{'")
                 }
@@ -122,6 +146,26 @@ pub fn try_parse_proc(ts: TokenStream) -> TokenStream {
         panic!("missing \"{{}}\"")
     };
     let var_ident = Ident::new("var", Span::mixed_site());
+    let result_ident = Ident::new("__parse_result", Span::mixed_site());
+    let (var_ty, var_get) = {
+        match var.ty {
+            VarTy::Normal => (quote!(_), quote!(#var_ident)),
+            VarTy::Hex => (
+                quote!(::strp::__private::Hex<_>),
+                quote!(#var_ident.into_inner()),
+            ),
+            VarTy::Binary => (
+                quote!(::strp::__private::Binary<_>),
+                quote!(#var_ident.into_inner()),
+            ),
+        }
+    };
+    let var_match = quote! {
+        match #var_ident{
+            Ok(#var_ident) => Ok(#var_get),
+            Err(e) => Err(e),
+        }
+    };
     let ret = if let Some(next) = next {
         assert!(
             next.content.is_none(),
@@ -130,36 +174,43 @@ pub fn try_parse_proc(ts: TokenStream) -> TokenStream {
         let m_str = next.m_str;
         quote! {
             if iter.clone().eq(#m_str.bytes()){
-                #var_ident
+                #var_match
             } else{
                 let err: ::strp::__private::alloc::string::String = iter.map(|b| b as char).collect();
                 Err(::strp::TryParseError::ExpectedMismatch(#m_str, err))
             }
         }
     } else {
-        quote!(#var_ident)
+        quote!(#var_match)
     };
-    let result_ident = Ident::new("__parse_result", Span::mixed_site());
+    let block_quote = quote! {
+            (|| {
+                let source = &#source;
+                let slice = ::core::convert::AsRef::<[u8]>::as_ref(source);
+                let mut iter = slice.iter().cloned().peekable();
+                let #var_ident: Result<#var_ty, _> = ::strp::__private::parse_single(&mut iter, #m_str, #delim);
+                #ret
+            })()
+    };
     let assign_or_ret = if let Some(inlined) = var.inlined {
         quote! {
-            #inlined = #result_ident;
-            ()
+            match #result_ident{
+                Ok(ok) => {
+                    #inlined = ok;
+                    Ok(())
+                }
+                Err(e) => Err(e),
+            }
         }
     } else {
         quote!(#result_ident)
     };
     quote! {
-        {
+        {(||{
             extern crate alloc;
-            let #result_ident = (|| {
-                let source = &#source;
-                let slice = ::core::convert::AsRef::<[u8]>::as_ref(source);
-                let mut iter = slice.iter().cloned().peekable();
-                let #var_ident = ::strp::__private::parse_single(&mut iter, #m_str, #delim);
-                #ret
-            })();
+            let #result_ident = { #block_quote };
             #assign_or_ret
-        }
+        })()}
     }
     .into()
 }
@@ -190,13 +241,27 @@ pub fn try_scan_proc(ts: TokenStream) -> TokenStream {
     let mut quote_slice = vec![];
     let mut ret_tuple = vec![];
     let mut ret_assign = vec![];
-    let var_count = vars.len();
+    let mut type_vec = vec![];
     for (i, var) in vars.into_iter().enumerate() {
         let index = LitInt::new(&i.to_string(), Span::call_site());
+        let (ty, get_val) = {
+            match var.0.ty {
+                VarTy::Normal => (quote!(_), quote!(#result_ident.#index)),
+                VarTy::Hex => (
+                    quote!(::strp::__private::Hex<_>),
+                    quote!(#result_ident.#index.into_inner()),
+                ),
+                VarTy::Binary => (
+                    quote!(::strp::__private::Binary<_>),
+                    quote!(#result_ident.#index.into_inner()),
+                ),
+            }
+        };
+        type_vec.push(ty);
         if let Some(inlined) = var.0.inlined {
-            ret_assign.push(quote!(#inlined = #result_ident.#index))
+            ret_assign.push(quote!(#inlined = #get_val))
         } else {
-            ret_tuple.push(quote!(#result_ident.#index))
+            ret_tuple.push(quote!(#get_val))
         }
         let m_str = var.1;
         let delim = if let Some(option) = var.2 {
@@ -217,10 +282,7 @@ pub fn try_scan_proc(ts: TokenStream) -> TokenStream {
         quote!()
     };
     let source = sparse.input;
-    let type_quote = {
-        let inner = Vec::from_iter((0..var_count).map(|_| quote!(_)));
-        quote!(( #(#inner),* ))
-    };
+    let type_quote = quote!((#(#type_vec,)*));
     quote! {
         {(|| {
             extern crate alloc;
@@ -243,7 +305,6 @@ pub fn try_scan_proc(ts: TokenStream) -> TokenStream {
                     Ok((#(#ret_tuple),*))
                 }
             }
-
         })()}
     }
     .into()
@@ -317,13 +378,16 @@ macro_rules! __impl__ {
 /// Attempts to parse a single variable from an iterator on a type that implements
 /// the `TryParse` trait.
 ///
-/// Accepts a source expression, which is then matched against a string
-/// literal in order to match a single value from the source. The source expression
-/// must evaluate into a type that derives the `TryParse`trait.
+/// Accepts a source expression which results in a type that implements `AsRef<[u8]>`,
+/// which is then matched against a string literal in order to match a single value from
+/// the source.
 ///
-/// ```no_run
-/// # use crate::{scan, try_scan, parse, try_parse};
+/// For more details read the documentation of the `strp` crate.
 ///
+/// # Examples.
+///
+/// ```
+/// # use crate::try_parse;
 /// // The whole source string will be parsed into a u32.
 /// let source = "20".to_string();
 /// let v = try_parse!(source => "{}");
@@ -352,16 +416,37 @@ macro_rules! __impl__ {
 /// let v = try_parse!(source => "{}");
 /// assert_eq!(v, Ok("abcd".to_string()));
 ///
-/// // Uses stdin instead of a source string.
-/// // Only available with the `std` feature.
-/// let v: f64 = parse!("{}");
-/// println!("{v}");
-///
 /// // Inlines the matched value. This causes `parse` to return ()
 /// // and instead assigns the parse result to v directly.
 /// let v: u32;
-/// parse!("u32:{v}");
+/// parse!("u32:5" => "u32:{v}");
+/// assert_eq!(v, 5);
+/// ```
+///
+/// # Using stdin instead of a source string.
+///
+/// ```no_run
+/// # use crate::try_parse;
+/// // Only available with the `std` feature.
+/// let v: f64 = parse!("{}");
 /// println!("{v}");
+/// ```
+///
+/// # Parsing hexadecimal or binary values.
+///
+/// ```
+/// # use crate::try_parse;
+/// let hex: u64 /* Need to specify 'u64' here, since otherwise the value will be too large. */ =
+///     try_parse!("input hex: 0x0123456789ABCDEF" => "input hex: 0x{:x}");
+/// assert_eq!(hex, 0x0123456789ABCDEF);
+///
+/// let bin = try_parse!("input bin: 0b11110001" => "input bin: 0b{:b}");
+/// assert_eq!(bin, 0b11110001);
+///
+/// // You may also inline parsed values into `try_parse`.
+/// let bin = 0;
+/// try_parse!("input bin: 0b1111" => "input bin: {bin:b}").unwrap();
+/// assert_eq!(bin, 0b1111);
 /// ```
 #[proc_macro]
 pub fn try_parse(ts: TokenStream) -> TokenStream {
@@ -373,10 +458,21 @@ pub fn try_parse(ts: TokenStream) -> TokenStream {
     .into()
 }
 
-/// Attempts to parse a single variable from an iterator described by a string literal.
-/// Panics on error.
+/// Interally uses `try_parse` and unwraps the result to parse a single value
+/// from a source string.
 ///
-/// For more details read the documentation of the `try_parse` macro.
+/// For more details read the documentation of the `strp` crate.
+///
+/// ```no_run
+/// # use crate::parse;
+/// let source = "hello world!";
+/// let world = strp::parse!(source => "hello {}!");
+/// assert_eq!(world, "world".to_string());
+///
+/// // Uses stdin as source.
+/// let number: u32 = parse!("input number: {}");
+/// println!("number: {number})
+/// ```
 #[proc_macro]
 pub fn parse(ts: TokenStream) -> TokenStream {
     let ts = __impl__!(
@@ -389,18 +485,20 @@ pub fn parse(ts: TokenStream) -> TokenStream {
 
 /// Very similar to `try_parse`, except it allows for 2 or more matched values.
 ///
-/// For more details read the documenation of the `try_parse` macro.
+/// For more details read the documenation of the `strp` crate.
 ///
-/// ```no_run
-/// # use strp::try_scan;
-///
+/// ```
+/// # use crate::try_scan;
 /// let source = "10, 20, 30, 40";
-/// let v = strp::try_scan!(source => "{}, {}, {}, {}");
-/// assert_eq!(v, Ok((10, 20, 30, 40)));
+/// let matched = strp::try_scan!(source => "{}, {}, {}, {}");
+/// assert_eq!(matched, Ok((10, 20, 30, 40)));
 ///
 /// // Uses stdin as source.
-/// let (l,r): (u32,u32) = strp::try_scan!("add {}, {}").unwrap();
-/// println!("{}", l + r);
+/// let input: Result<(u32, u32), _> = strp::try_scan!("add {}, {}");
+/// match input {
+///     Ok((l,r)) => println!("result: {}", l + r),
+///     Err(e) => println!("parsing error: {e:?}"),
+/// }
 /// ```
 #[proc_macro]
 pub fn try_scan(ts: TokenStream) -> TokenStream {
@@ -412,10 +510,21 @@ pub fn try_scan(ts: TokenStream) -> TokenStream {
     .into()
 }
 
-/// Attempts to parse multiple variables from an iterator described by a string literal.
-/// Panics on error.
+/// Interally uses `try_scan` and unwraps the result to parse multiple values
+/// from a source string.
 ///
-/// For more details read the documentation of the `try_scan` macro.
+/// For more details read the documentation of the `strp` crate.
+///
+/// ```no_run
+/// # use crate::scan;
+/// let source = "10, 20, 30, 40";
+/// let matched = strp::scan!(source => "{}, {}, {}, {}");
+/// assert_eq!(matched, (10, 20, 30, 40));
+///
+/// // Uses stdin as source.
+/// let (l, r): (u32, u32) = scan!("add {}, {}");
+/// println!("result: {}", l + r)
+/// ```
 #[proc_macro]
 pub fn scan(ts: TokenStream) -> TokenStream {
     let ts = __impl__!(
@@ -447,6 +556,7 @@ impl Parse for Rep {
     }
 }
 
+#[doc(hidden)]
 #[proc_macro]
 pub fn rep(ts: TokenStream) -> TokenStream {
     let rep: Rep = syn::parse::<Rep>(ts).expect("expected a valid repeat statement!");
