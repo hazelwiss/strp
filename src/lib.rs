@@ -3,6 +3,24 @@
 //!
 //! ```no_run
 //! # use strp::{scan, try_parse, parse, try_scan};
+//! // `parse` and `try_parse` attempts to parse
+//! // a single value from a source string.
+//! let number = try_parse!("number: 30" => "number: {}");
+//! assert_eq!(number, Ok(30u32));
+//!
+//! // `scan`and `try_scan` attempts to parse two or
+//! // more values from a source string.
+//! let matched = try_scan!("this is four words!" => "{} {} {} {}!");
+//! assert_eq!(
+//!     matched,
+//!     Ok((
+//!         "this".to_string(),
+//!          "is".to_string(),
+//!          "four".to_string(),
+//!          "words".to_string()
+//!     ))
+//! );
+//!
 //! // `scan` parses two or more values from stdin.
 //! // Panics on failure.
 //! let (left, right): (u32, u32) = scan!("add {}, {}");
@@ -23,7 +41,7 @@
 //! }
 //!
 //! // Uses a source string rather than piping stdin.
-//! let value: String = try_parse!("this string is matched" => "{} string is matched");
+//! let value = try_parse!("this string is matched" => "{} string is matched");
 //! assert_eq!(value, Ok("this".to_string()));
 //!
 //! // Matched values may also be inlined into the match string.

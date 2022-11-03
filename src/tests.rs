@@ -5,6 +5,9 @@ use std::string::{String, ToString};
 
 #[test]
 fn parse_single() {
+    let number = try_parse!("number: 30" => "number: {}");
+    assert_eq!(number, Ok(30u32));
+
     let v = try_parse!("20" => "{}");
     assert_eq!(v, Ok(20));
 
@@ -71,6 +74,17 @@ fn parse_multiple() {
 
     let v = try_scan!("1,2,3,4,5,6,7,8,9,10" => "{},{},{},{},{},{}");
     assert_eq!(v, Ok((1, 2, 3, 4, 5, "6,7,8,9,10".to_string())));
+
+    let v = try_scan!("this is four words!" => "{} {} {} {}!");
+    assert_eq!(
+        v,
+        Ok((
+            "this".to_string(),
+            "is".to_string(),
+            "four".to_string(),
+            "words".to_string()
+        ))
+    );
 
     let v: Result<(u32, u32), _> = try_scan!("hello world20,30!" => "world{},{}!");
     assert!(matches!(v, Err(_)));
