@@ -15,10 +15,9 @@ type, or there's missing context.
 
 ## Basic `parse` and `try_parse` usage
 
+`parse` and `try_parse` parses a single value from the source string,
+and has more cohesive errors than `scan` and `try_scan`.
 ```rust
-// `parse` and `try_parse` parses a single value from the source string,
-// and has more cohesive errors than `scan` and `try_scan`.
-
 // Attempts to parse  a number from `source` using `try_parse`
 let source = String::from("number: 30");
 let number = try_parse!(source => "number: {}");
@@ -30,13 +29,24 @@ let value: String = parse!(source => "hello, {}!");
 assert_eq!(value, "world".to_string());
 ```
 
+Neither `parse` or `try_parse` accepts anything other than one parsed
+value at a time. The following code will not compile.
+
+```compile_fail
+let source = "some source"
+let ok = parse!(source => "{}"); // Ok!
+
+let err = parse!(source => "{} {}"); // Error! Attempting to parse multiple values with `parse`.
+
+let err = parse!(source => "some source"); // Error! Attempting to parse no values using `parse`.
+```
+
 ## Basic `scan` and `try_scan` usage
 
+`scan` and `try_scan` has less cohesive erros than `parse` and
+`try_parse`, but allows parsing multiple values from a single
+source string.
 ```rust
-// `scan` and `try_scan` has less cohesive erros than `parse` and
-// `try_parse`, but allows parsing multiple values from a single
-// source string.
-
 // Example of parsing 4 strings from one source string using `try_scan`
 let source = String::from("this is four words!");
 let matched = try_scan!(source => "{} {} {} {}!");
@@ -56,9 +66,22 @@ let (left, right): (u32, u32) = scan!(source => "add {}, {}");
 assert_eq!(left + right, 50);
 ```
 
+Both `scan` or `try_scan` requires two or more parsed values at a time.
+The following code will not compile.
+
+```compile_fail
+let source = "some source";
+let ok = scan!(source => "{} {}"); // Ok!
+
+let err = scan!(source => "{}"); // Error! Attempting to parse a single value with `scan`.
+
+let err = scan!(source => "some source"); // Error! Attempting to parse no values using `scan`.
+```
+
 ## Using stdin with the `std` feature.
 
 ```rust
+// Uses stdin as a source string.
 let name: String = parse!("hello! my name is {}.");
 println!("hello, {name}!");
 
