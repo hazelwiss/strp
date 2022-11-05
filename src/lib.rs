@@ -279,7 +279,7 @@ pub mod __private {
         delim: Option<u8>,
     ) -> Result<S, TryParseError<S::Err>> {
         let cmp = m_str.bytes();
-        let iter_err = iter.clone();
+        let mut iter_err = iter.clone();
         if iter.by_ref().take(cmp.len()).eq(cmp) {
             if let Some(delim) = delim {
                 let iter = iter.by_ref();
@@ -289,10 +289,18 @@ pub mod __private {
                 S::try_parse(iter)
             }
         } else {
-            Err(TryParseError::ExpectedMismatch(
-                m_str,
-                iter_err.map(|b| b as char).collect(),
-            ))
+            return if let Some(delim) = delim {
+                let iter_err = core::iter::from_fn(|| iter_err.next_if(|e| *e != delim));
+                Err(TryParseError::ExpectedMismatch(
+                    m_str,
+                    iter_err.map(|b| b as char).collect(),
+                ))
+            } else {
+                Err(TryParseError::ExpectedMismatch(
+                    m_str,
+                    iter_err.map(|b| b as char).collect(),
+                ))
+            };
         }
     }
 
