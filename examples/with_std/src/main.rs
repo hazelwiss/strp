@@ -10,4 +10,7 @@ fn main() {
 
     let try_scan: Result<(u32, u32), _> = strp::try_scan!("{}, {}");
     println!("{try_scan:?}");
+
+    let (first, second): (String, String) = strp::scan!("first: {} second: {}");
+    println!("first: {first}, second: {second}");
 }

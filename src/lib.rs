@@ -444,8 +444,8 @@ pub enum TryParseError<T> {
 impl<T: core::fmt::Debug> core::fmt::Debug for TryParseError<T> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
-            Self::ExpectedMismatch(s, i) => write!(f, "expected: \"{s}\"\ngot: \"{i}\"."),
-            Self::InvalidUtf8String => write!(f, "invalid utf8 encoding in source string."),
+            Self::ExpectedMismatch(s, i) => write!(f, "expected: \"{s}\" but got: \"{i}\""),
+            Self::InvalidUtf8String => write!(f, "invalid utf8 encoding in source string"),
             Self::Err(arg0) => arg0.fmt(f),
         }
     }
