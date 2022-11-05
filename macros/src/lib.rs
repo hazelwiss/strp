@@ -295,7 +295,8 @@ pub fn try_scan_proc(ts: TokenStream) -> TokenStream {
                         #quote_tail;
                         Ok(ok)
                     }
-                    Err(_) => Err(::strp::TryParseError::Err(())),
+                    Err(::strp::TryParseError::Err(_)) => Err(::strp::TryParseError::Err(())),
+                    Err(e) => Err(e),
                 }
             })();
             match #result_ident{
@@ -355,7 +356,7 @@ macro_rules! __impl__ {
                                 {
                                     let mut string = ::std::string::String::new();
                                     ::std::io::stdin().read_line(&mut string).unwrap();
-                                    string.pop();
+                                    let string = string.trim();
                                     $($tt)*!(string => #literal)
                                 }
                             }

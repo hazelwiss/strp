@@ -1,7 +1,7 @@
 [package]
 name = "strp_macros"
 authors = ["Kim-Dewelski"]
-version = "3.0.0"
+version = "3.1.0"
 edition = "2021"
 description = "a macro library intended to be used alongside strp"
 license = "MIT"

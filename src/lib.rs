@@ -300,7 +300,7 @@ pub mod __private {
         fn parse_multiple(
             iter: &mut Peekable<impl Iterator<Item = u8> + Clone>,
             sparse_data: &[(&'static str, Option<u8>)],
-        ) -> Result<Self, ()>;
+        ) -> Result<Self, TryParseError<()>>;
     }
 
     impl<T: strp::TryParse, const LEN: usize> ParseMultiple for [T; LEN] {
@@ -308,13 +308,22 @@ pub mod __private {
         fn parse_multiple(
             iter: &mut Peekable<impl Iterator<Item = u8> + Clone>,
             sparse_data: &[(&'static str, Option<u8>)],
-        ) -> Result<Self, ()> {
+        ) -> Result<Self, TryParseError<()>> {
             assert!(LEN == sparse_data.len());
             let mut array: [T; LEN] = unsafe { core::mem::MaybeUninit::zeroed().assume_init() };
             for i in 0..LEN {
                 let cur = unsafe { sparse_data.get_unchecked(i) };
-                *unsafe { array.get_unchecked_mut(i) } =
-                    parse_single::<T>(iter, cur.0, cur.1).or(Err(()))?;
+                *unsafe { array.get_unchecked_mut(i) } = match parse_single::<T>(iter, cur.0, cur.1)
+                {
+                    Ok(ok) => ok,
+                    Err(strp::TryParseError::Err(_)) => return Err(TryParseError::Err(())),
+                    Err(TryParseError::InvalidUtf8String) => {
+                        return Err(TryParseError::InvalidUtf8String)
+                    }
+                    Err(TryParseError::ExpectedMismatch(l, r)) => {
+                        return Err(TryParseError::ExpectedMismatch(l, r))
+                    }
+                }
             }
             Ok(array)
         }
@@ -328,10 +337,19 @@ pub mod __private {
                 fn parse_multiple(
                     iter: &mut Peekable<impl Iterator<Item = u8> + Clone>,
                     sparse_data: &[(&'static str, Option<u8>)],
-                ) -> Result<Self, ()> {
+                ) -> Result<Self, TryParseError<()>> {
                     assert!($size == sparse_data.len());
                     Ok(
-                        macros::rep!($size[parse_single(iter, sparse_data[#].0, sparse_data[#].1).or(Err(()))?])
+                        macros::rep!($size[match parse_single(iter, sparse_data[#].0, sparse_data[#].1){
+                            Ok(ok) => ok,
+                            Err(strp::TryParseError::Err(_)) => return Err(TryParseError::Err(())),
+                            Err(TryParseError::InvalidUtf8String) => {
+                                return Err(TryParseError::InvalidUtf8String)
+                            }
+                            Err(TryParseError::ExpectedMismatch(l, r)) => {
+                                return Err(TryParseError::ExpectedMismatch(l, r))
+                            }
+                        }])
                     )
                 }
             }
