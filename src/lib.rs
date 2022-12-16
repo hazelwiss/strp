@@ -270,7 +270,9 @@ pub mod __private {
         };
     }
 
-    impl_hex__and_binary_for_primitives!(u8, i8, u16, i16, u32, i32, u64, i64, u128, i128);
+    impl_hex__and_binary_for_primitives!(
+        u8, i8, u16, i16, u32, i32, u64, i64, u128, i128, usize, isize
+    );
 
     #[inline(always)]
     pub fn parse_single<S: ::strp::TryParse>(
