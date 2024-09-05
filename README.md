@@ -98,7 +98,7 @@ assert_eq!(a + b, c);
 let try_scan: Result<(u32, u32, u32), _> = try_scan!("{} + {} = {}");
 match try_scan {
     Ok((a,b,c)) => println!("{a} + {b} = {c}"),
-    Err(e) => println!("an erro occured: {e:?}"),
+    Err(e) => println!("an error occured: {e:?}"),
 }
 ```
 
